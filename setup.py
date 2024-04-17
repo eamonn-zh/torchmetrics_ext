@@ -5,9 +5,10 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="torchmetrics_ext",
-    version="0.1.0",
+    version="0.1.1",
     description="An extension of torchmetrics package.",
     long_description=long_description,
+    long_description_content_type="text/markdown",
     author="Yiming Zhang",
     packages=find_packages(where="src"),
     package_dir={"": "src"},

@@ -10,13 +10,18 @@ class ScanReferMetric(Metric):
 
     Example:
         >>> import torch
-        >>> from src.evaluation.scanrefer_metric import ScanReferMetric
+        >>> from torchmetrics_ext.visual_grounding import ScanReferMetric
         >>> metric = ScanReferMetric()
-        >>> pred_aabbs = torch.rand(size=(3, 2, 3), dtype=torch.float32)
-        >>> gt_aabbs = torch.rand(size=(3, 2, 3), dtype=torch.float32)
-        >>> eval_types = ("unique", "multiple", "multiple")
-        >>> metric(pred_aabbs, gt_aabbs, eval_types)
-
+        >>> pred_aabbs = torch.tensor([[[0., 0., 0.], [1., 1., 1.]], [[0., 0., 0.], [2., 2., 2.]]], dtype=torch.float32)
+        >>> gt_aabbs = torch.tensor([[[0., 0., 0.], [1., 1., 1.]], [[0., 0., 0.], [1.5, 1.5, 1.5]]], dtype=torch.float32)
+        >>> gt_eval_types = ("unique", "multiple")
+        >>> metric(pred_aabbs, gt_aabbs, gt_eval_types)
+        {'unique_0.25': tensor(1.),
+         'unique_0.5': tensor(1.),
+         'multiple_0.25': tensor(1.),
+         'multiple_0.5': tensor(0.),
+         'all_0.25': tensor(1.),
+         'all_0.5': tensor(0.5000)}
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -34,8 +39,8 @@ class ScanReferMetric(Metric):
     @staticmethod
     def _get_batch_aabb_pair_ious_optimized(batch_boxes_1_bound: torch.Tensor, batch_boxes_2_bound: torch.Tensor) -> torch.Tensor:
         """
-        :param batch_boxes_1_bound: a batch of axis-aligned bounding boxes (B, 2, 3)
-        :param batch_boxes_2_bound: a batch of axis-aligned bounding boxes (B, 2, 3)
+        :param batch_boxes_1_bound: a batch of axis-aligned bounding box bounds (B, 2, 3)
+        :param batch_boxes_2_bound: a batch of axis-aligned bounding box bounds (B, 2, 3)
         :return: IoU values for each pair of axis-aligned bounding boxes (B, )
         """
         # directly unpack the min and max without splitting
@@ -72,8 +77,8 @@ class ScanReferMetric(Metric):
 
     def update(self, preds: torch.Tensor, targets: torch.Tensor, eval_types: Sequence[str]) -> None:
         """
-        :param preds: predicted axis-aligned bounding boxes (B, 2, 3)
-        :param targets: ground truth axis-aligned bounding boxes (B, 2, 3)
+        :param preds: predicted axis-aligned bounding box bounds (B, 2, 3)
+        :param targets: ground truth axis-aligned bounding box bounds (B, 2, 3)
         :param eval_types: a sequence of "unique" or "multiple" labels (B, )
         """
 
@@ -109,6 +114,7 @@ class ScanReferMetric(Metric):
         self.multiple_tp_thresh_50 += torch.count_nonzero(tp_thresh_50_mask & eval_type_multiple_mask)
 
     def compute(self) -> Dict[str, torch.Tensor]:
+        """Compute Acc@kIoU based on inputs passed in to ``update`` previously."""
         return {
             "unique_0.25": self.unique_tp_thresh_25 / self.unique_total,
             "unique_0.5": self.unique_tp_thresh_50 / self.unique_total,

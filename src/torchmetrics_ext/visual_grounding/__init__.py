@@ -1,3 +1,4 @@
-from torchmetrics_ext.visual_grounding.scanrefer import ScanReferMetric
+from .scanrefer import ScanReferMetric
+from .referit3d import ReferIt3DMetric
 
-__all__ = ["ScanReferMetric"]
+__all__ = ["ScanReferMetric", "ReferIt3DMetric"]

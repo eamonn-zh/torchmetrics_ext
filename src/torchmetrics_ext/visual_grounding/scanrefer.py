@@ -1,6 +1,7 @@
 import torch
 from torchmetrics import Metric
 from typing import Dict, Sequence
+from torchmetrics_ext.tool import get_batch_aabb_pair_ious
 
 
 class ScanReferMetric(Metric):
@@ -12,6 +13,7 @@ class ScanReferMetric(Metric):
         >>> import torch
         >>> from torchmetrics_ext.visual_grounding import ScanReferMetric
         >>> metric = ScanReferMetric()
+        >>> # min max bounds of 3D axis-aligned bounding boxes (B, 2, 3)
         >>> pred_aabbs = torch.tensor([[[0., 0., 0.], [1., 1., 1.]], [[0., 0., 0.], [2., 2., 2.]]], dtype=torch.float32)
         >>> gt_aabbs = torch.tensor([[[0., 0., 0.], [1., 1., 1.]], [[0., 0., 0.], [1.5, 1.5, 1.5]]], dtype=torch.float32)
         >>> gt_eval_types = ("unique", "multiple")
@@ -23,63 +25,36 @@ class ScanReferMetric(Metric):
          'all_0.25': tensor(1.),
          'all_0.5': tensor(0.5000)}
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.eval_types_mapping = {"unique": 0, "multiple": 1}
-        self.add_state("unique_tp_thresh_25", default=torch.tensor(0), dist_reduce_fx="sum")
-        self.add_state("unique_tp_thresh_50", default=torch.tensor(0), dist_reduce_fx="sum")
-        self.add_state("multiple_tp_thresh_25", default=torch.tensor(0), dist_reduce_fx="sum")
-        self.add_state("multiple_tp_thresh_50", default=torch.tensor(0), dist_reduce_fx="sum")
-        self.add_state("all_tp_thresh_25", default=torch.tensor(0), dist_reduce_fx="sum")
-        self.add_state("all_tp_thresh_50", default=torch.tensor(0), dist_reduce_fx="sum")
-        self.add_state("unique_total", default=torch.tensor(0), dist_reduce_fx="sum")
-        self.add_state("multiple_total", default=torch.tensor(0), dist_reduce_fx="sum")
-        self.add_state("all_total", default=torch.tensor(0), dist_reduce_fx="sum")
+    def __init__(self, iou_thresholds: Sequence[float] = (0.25, 0.5), eval_types: Sequence[str] = ("unique", "multiple")):
+        super().__init__()
+        self.iou_thresholds = iou_thresholds
 
-    @staticmethod
-    def _get_batch_aabb_pair_ious_optimized(batch_boxes_1_bound: torch.Tensor, batch_boxes_2_bound: torch.Tensor) -> torch.Tensor:
-        """
-        :param batch_boxes_1_bound: a batch of axis-aligned bounding box bounds (B, 2, 3)
-        :param batch_boxes_2_bound: a batch of axis-aligned bounding box bounds (B, 2, 3)
-        :return: IoU values for each pair of axis-aligned bounding boxes (B, )
-        """
-        # directly unpack the min and max without splitting
-        box_1_x_min, box_1_y_min, box_1_z_min = batch_boxes_1_bound[:, 0].unbind(dim=1)
-        box_1_x_max, box_1_y_max, box_1_z_max = batch_boxes_1_bound[:, 1].unbind(dim=1)
+        self.eval_types_mapping = {}
+        for i, eval_type in enumerate(eval_types):
+            self.eval_types_mapping[eval_type] = i
+            self.add_state(name=f"{eval_type}_total", default=torch.tensor(0), dist_reduce_fx="sum")
 
-        box_2_x_min, box_2_y_min, box_2_z_min = batch_boxes_2_bound[:, 0].unbind(dim=1)
-        box_2_x_max, box_2_y_max, box_2_z_max = batch_boxes_2_bound[:, 1].unbind(dim=1)
+            for iou_threshold in self.iou_thresholds:
+                self.add_state(
+                    name=f"{eval_type}_tp_thresh_{iou_threshold}", default=torch.tensor(0), dist_reduce_fx="sum"
+                )
 
-        # calculate intersections directly
-        x_a = torch.maximum(box_1_x_min, box_2_x_min)
-        y_a = torch.maximum(box_1_y_min, box_2_y_min)
-        z_a = torch.maximum(box_1_z_min, box_2_z_min)
-        x_b = torch.minimum(box_1_x_max, box_2_x_max)
-        y_b = torch.minimum(box_1_y_max, box_2_y_max)
-        z_b = torch.minimum(box_1_z_max, box_2_z_max)
+        for iou_threshold in self.iou_thresholds:
+            self.add_state(name=f"all_tp_thresh_{iou_threshold}", default=torch.tensor(0), dist_reduce_fx="sum")
 
-        # simplify volume calculations
-        intersection_volume = torch.clamp((x_b - x_a), min=0) * torch.clamp((y_b - y_a), min=0) * torch.clamp(
-            (z_b - z_a), min=0
-        )
-        box_1_volume = (box_1_x_max - box_1_x_min) * (box_1_y_max - box_1_y_min) * (box_1_z_max - box_1_z_min)
-        box_2_volume = (box_2_x_max - box_2_x_min) * (box_2_y_max - box_2_y_min) * (box_2_z_max - box_2_z_min)
-
-        # IoU calculation with epsilon to prevent division by zero
-        ious = intersection_volume / (box_1_volume + box_2_volume - intersection_volume + torch.finfo(torch.float32).eps)
-        return ious.flatten()
+        self.add_state(name="all_total", default=torch.tensor(0), dist_reduce_fx="sum")
 
     def _convert_eval_types_to_idx(self, eval_types: Sequence[str], device) -> torch.Tensor:
-        eval_types_tensor = torch.empty(size=(len(eval_types), ), dtype=torch.bool, device=device)
+        eval_types_tensor = torch.empty(size=(len(eval_types), ), dtype=torch.uint8, device=device)
         for i, eval_type in enumerate(eval_types):
             eval_types_tensor[i] = self.eval_types_mapping[eval_type]
         return eval_types_tensor
 
     def update(self, preds: torch.Tensor, targets: torch.Tensor, eval_types: Sequence[str]) -> None:
         """
-        :param preds: predicted axis-aligned bounding box bounds (B, 2, 3)
-        :param targets: ground truth axis-aligned bounding box bounds (B, 2, 3)
-        :param eval_types: a sequence of "unique" or "multiple" labels (B, )
+        :param preds: predicted axis-aligned bounding box min max bounds (B, 2, 3)
+        :param targets: ground truth axis-aligned bounding box min max bounds (B, 2, 3)
+        :param eval_types: a sequence of evaluation type labels (B, )
         """
 
         # check input sizes
@@ -90,36 +65,36 @@ class ScanReferMetric(Metric):
         eval_types_tensor = self._convert_eval_types_to_idx(eval_types, preds.device)
 
         # calculate axis-aligned bounding boxes between predictions and GTs
-        ious = self._get_batch_aabb_pair_ious_optimized(preds, targets)
+        ious = get_batch_aabb_pair_ious(preds, targets)
 
         # count true positives above the IoU thresholds
-        tp_thresh_25_mask = ious >= 0.25
-        tp_thresh_50_mask = ious >= 0.50
+        tp_thresh_masks = {}
+        for iou_threshold in self.iou_thresholds:
+            tp_thresh_masks[f"tp_thresh_{iou_threshold}_mask"] = ious >= iou_threshold
 
-        eval_type_unique_mask = eval_types_tensor == self.eval_types_mapping["unique"]
-        eval_type_multiple_mask = eval_types_tensor == self.eval_types_mapping["multiple"]
+        eval_type_masks = {}
+        for eval_type in self.eval_types_mapping.keys():
+            eval_type_masks[eval_type] = eval_types_tensor == self.eval_types_mapping[eval_type]
 
         # update metrics
         self.all_total += targets.shape[0]
-        self.unique_total += torch.count_nonzero(eval_type_unique_mask)
-        self.multiple_total += torch.count_nonzero(eval_type_multiple_mask)
 
-        self.all_tp_thresh_25 += torch.count_nonzero(tp_thresh_25_mask)
-        self.all_tp_thresh_50 += torch.count_nonzero(tp_thresh_50_mask)
+        for eval_type in self.eval_types_mapping.keys():
+            self.__dict__[f"{eval_type}_total"] += torch.count_nonzero(eval_type_masks[eval_type])
 
-        self.unique_tp_thresh_25 += torch.count_nonzero(tp_thresh_25_mask & eval_type_unique_mask)
-        self.unique_tp_thresh_50 += torch.count_nonzero(tp_thresh_50_mask & eval_type_unique_mask)
+        for iou_threshold in self.iou_thresholds:
+            for eval_type in self.eval_types_mapping.keys():
+                tp_thresh_mask = tp_thresh_masks[f"tp_thresh_{iou_threshold}_mask"]
+                self.__dict__[f"{eval_type}_tp_thresh_{iou_threshold}"] += torch.count_nonzero(tp_thresh_mask & eval_type_masks[eval_type])
+            self.__dict__[f"all_tp_thresh_{iou_threshold}"] += torch.count_nonzero(tp_thresh_mask & eval_type_masks[eval_type])
 
-        self.multiple_tp_thresh_25 += torch.count_nonzero(tp_thresh_25_mask & eval_type_multiple_mask)
-        self.multiple_tp_thresh_50 += torch.count_nonzero(tp_thresh_50_mask & eval_type_multiple_mask)
 
     def compute(self) -> Dict[str, torch.Tensor]:
         """Compute Acc@kIoU based on inputs passed in to ``update`` previously."""
-        return {
-            "unique_0.25": self.unique_tp_thresh_25 / self.unique_total,
-            "unique_0.5": self.unique_tp_thresh_50 / self.unique_total,
-            "multiple_0.25": self.multiple_tp_thresh_25 / self.multiple_total,
-            "multiple_0.5": self.multiple_tp_thresh_50 / self.multiple_total,
-            "all_0.25": self.all_tp_thresh_25 / self.all_total,
-            "all_0.5": self.all_tp_thresh_50 / self.all_total
-        }
+
+        output_dict = {}
+        for iou_threshold in self.iou_thresholds:
+            for eval_type in self.eval_types_mapping.keys():
+                output_dict[f"{eval_type}_{iou_threshold}"] = self.__dict__[f"{eval_type}_tp_thresh_{iou_threshold}"] / self.__dict__[f"{eval_type}_total"]
+            output_dict[f"all_{iou_threshold}"] = self.__dict__[f"all_tp_thresh_{iou_threshold}"] / self.all_total
+        return output_dict

@@ -37,7 +37,7 @@ It measures the thresholded accuracy Acc@kIoU, where the positive predictions ha
 ```python
 import torch
 from torchmetrics_ext.metrics.visual_grounding import ScanReferMetric
-metric = ScanReferMetric(dataset_file_path="path to the ScanRefer_filtered_val.json file", split="validation")
+metric = ScanReferMetric(dataset_file_path="./ScanRefer_filtered_val.json", split="validation")
 
 # preds is a dictionary mapping each unique description identifier (formatted as "{scene_id}_{object_id}_{ann_id}")
 # to the predicted axis-aligned bounding boxes in shape (2, 3)
@@ -57,7 +57,7 @@ It measures the accuracy of selecting the target object from the candidates. The
 import torch
 from torchmetrics_ext.metrics.visual_grounding import Nr3DMetric
 
-metric = Nr3DMetric()
+metric = Nr3DMetric(split="test")
 
 # indices of predicted and ground truth objects (B, )
 pred_indices = torch.tensor([5, 2, 0, 0], dtype=torch.uint8)
@@ -71,7 +71,6 @@ results = metric(pred_indices, gt_indices, gt_eval_types)
 > The dataset will be automatically downloaded from the official [Multi3DRefer Hugging Face repo](https://huggingface.co/datasets/3dlg-hcvc/Multi3DRefer).
 
 It measures the F1-scores at multiple IoU thresholds (F1@kIoU), where the positive predictions have higher intersection over union (IoU) with the ground truths than the thresholds. The metric is based on the [Multi3DRefer](https://3dlg-hcvc.github.io/multi3drefer/) task.
-Note: This metric automatically loads ground truths from [Hugging Face](https://huggingface.co/datasets/3dlg-hcvc/Multi3DRefer).
 
 ```python
 import torch

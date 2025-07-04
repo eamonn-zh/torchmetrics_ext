@@ -5,7 +5,7 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="torchmetrics_ext",
-    version="0.2.1",
+    version="0.3.0",
     description="An extension of torchmetrics package.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -24,6 +24,5 @@ setup(
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
     ],
-    install_requires=["torchmetrics", "torch"],
-    extras_require={"torch": ["torch"]},
+    install_requires=["torchmetrics", "torch", "huggingface_hub", "datasets", "scipy", "gdown"]
 )

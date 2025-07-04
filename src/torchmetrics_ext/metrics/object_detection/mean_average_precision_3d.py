@@ -3,7 +3,7 @@ import numpy as np
 from torchmetrics import Metric
 from typing import Dict, Sequence
 from torchmetrics.utilities import dim_zero_cat
-from torchmetrics_ext.tool import get_batch_aabb_ious
+from torchmetrics_ext.tools import get_aabb_per_pair_ious
 
 
 class MeanAveragePrecisionMetric(Metric):
@@ -69,8 +69,8 @@ class MeanAveragePrecisionMetric(Metric):
 
                 self.__dict__[f"total_{sem_class}"] += torch.count_nonzero(class_target_mask)
 
-                current_ious = get_batch_aabb_ious(
-                    boxes_1=current_pred_boxes_sorted[class_pred_mask], boxes_2=current_target_boxes[class_target_mask]
+                current_ious = get_aabb_per_pair_ious(
+                    boxes_1_bound=current_pred_boxes_sorted[class_pred_mask], boxes_2_bound=current_target_boxes[class_target_mask]
                 )
 
                 if current_ious.shape[1] == 0:

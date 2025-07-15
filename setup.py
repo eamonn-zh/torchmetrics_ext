@@ -24,5 +24,8 @@ setup(
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
     ],
-    install_requires=["torchmetrics", "torch", "huggingface_hub", "datasets", "scipy", "gdown"]
+    install_requires=["torchmetrics", "torch", "huggingface_hub", "datasets", "scipy", "gdown"],
+    extras_require={
+        "dev": ["pytest"]
+    },
 )

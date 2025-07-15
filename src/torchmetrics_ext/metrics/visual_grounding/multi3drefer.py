@@ -65,10 +65,10 @@ class Multi3DReferMetric(Metric):
 
             for iou_threshold in self.iou_thresholds:
                 self.add_state(
-                    name=f"{eval_type}_f1_thresh_{iou_threshold}", default=torch.tensor(0), dist_reduce_fx="sum"
+                    name=f"{eval_type}_f1_thresh_{iou_threshold}", default=torch.tensor(0.), dist_reduce_fx="sum"
                 )
         for iou_threshold in self.iou_thresholds:
-            self.add_state(name=f"all_f1_thresh_{iou_threshold}", default=torch.tensor(0), dist_reduce_fx="sum")
+            self.add_state(name=f"all_f1_thresh_{iou_threshold}", default=torch.tensor(0.), dist_reduce_fx="sum")
 
         self.add_state(name="all_total", default=torch.tensor(0), dist_reduce_fx="sum")
 
@@ -166,12 +166,14 @@ class Multi3DReferMetric(Metric):
     def compute(self) -> Dict[str, torch.Tensor]:
         output_dict = {}
         for iou_threshold in self.iou_thresholds:
-            for eval_type in self.eval_type:
+            for eval_type in self.eval_types:
                 output_dict[f"{eval_type}_{iou_threshold}"] = self.__dict__[f"{eval_type}_f1_thresh_{iou_threshold}"] / self.__dict__[f"{eval_type}_total"]
             output_dict[f"all_{iou_threshold}"] = self.__dict__[f"all_f1_thresh_{iou_threshold}"] / self.all_total
 
         # clean the zt case since it doesn't have thresholds
-        output_dict[f"zt_w_d_f1"] = output_dict["zt_w_d_f1_thresh_0.25"]
-        del output_dict["zt_w_d_f1_thresh_0.5"]
-        del output_dict["zt_w_d_f1_thresh_0.25"]
+        output_dict[f"zt_w_d"] = output_dict["zt_w_d_0.25"]
+        del output_dict["zt_w_d_0.5"]
+        del output_dict["zt_w_d_0.25"]
+        del output_dict["zt_wo_d_0.5"]
+        del output_dict["zt_wo_d_0.25"]
         return output_dict

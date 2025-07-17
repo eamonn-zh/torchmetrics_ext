@@ -166,7 +166,7 @@ class Multi3DReferMetric(Metric):
     def compute(self) -> Dict[str, torch.Tensor]:
         output_dict = {}
         for iou_threshold in self.iou_thresholds:
-            for eval_type in self.eval_types:
+            for eval_type in Multi3DReferMetric.eval_types:
                 output_dict[f"{eval_type}_{iou_threshold}"] = self.__dict__[f"{eval_type}_f1_thresh_{iou_threshold}"] / self.__dict__[f"{eval_type}_total"]
             output_dict[f"all_{iou_threshold}"] = self.__dict__[f"all_f1_thresh_{iou_threshold}"] / self.all_total
 

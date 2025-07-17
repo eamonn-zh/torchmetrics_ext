@@ -172,6 +172,7 @@ class Multi3DReferMetric(Metric):
 
         # clean the zt case since it doesn't have thresholds
         output_dict[f"zt_w_d"] = output_dict["zt_w_d_0.25"]
+        output_dict[f"zt_wo_d"] = output_dict["zt_wo_d_0.25"]
         del output_dict["zt_w_d_0.5"]
         del output_dict["zt_w_d_0.25"]
         del output_dict["zt_wo_d_0.5"]

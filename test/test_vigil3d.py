@@ -65,7 +65,7 @@ def test_vigil3d_metric_medium_iou(vigil3d_metric):
     assert result["all_0.5"].item() == 0.5
 
 
-def test_multi3drefer_metric_high_iou(vigil3d_metric):
+def test_vigil3d_metric_high_iou(vigil3d_metric):
     vigil3d_metric.reset()  # Reset the metric before testing
 
     # Test update functionality with dummy data

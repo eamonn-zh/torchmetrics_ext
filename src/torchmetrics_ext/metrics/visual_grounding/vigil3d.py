@@ -17,7 +17,8 @@ class ViGiL3DMetric(Metric):
     Predicted and ground truth axis-aligned bounding boxes are compared using the Hungarian matching algorithm based on IoUs.
 
     Note:
-        - the GT box coordinates are axis-aligned by applying the 4x4 transformation matrix provided in <scene_id>.txt from the ScanNet dataset.
+        - ScanNet: the GT box coordinates are axis-aligned by applying the 4x4 transformation matrix provided in <scene_id>.txt from the dataset
+        - ScanNet++: the GT box coordinates are directly from the dataset without applying any additional transformations
         - final metrics are computed as averages across the submitted predictions, rather than across the entire dataset.
 
     References:

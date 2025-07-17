@@ -3,7 +3,7 @@ import torch
 from torchmetrics_ext.metrics.visual_grounding import ViGiL3DMetric
 
 
-# Test for Multi3DReferMetric
+# Test for ViGiL3DMetric
 @pytest.fixture
 def vigil3d_metric():
     return ViGiL3DMetric(split="validation")

@@ -53,10 +53,11 @@ class Multi3DReferMetric(Metric):
         >>> result = metric.compute()
         >>> metric.reset()  # reset metric state for next evaluation round
     """
+
     iou_thresholds = (0.25, 0.5)
     eval_types = ("zt_wo_d", "zt_w_d", "st_wo_d", "st_w_d", "mt")
 
-    def __init__(self, split="validation"):
+    def __init__(self, split: str = "validation", strict: bool = False):
         super().__init__()
 
         # initialize metrics
@@ -65,15 +66,16 @@ class Multi3DReferMetric(Metric):
 
             for iou_threshold in self.iou_thresholds:
                 self.add_state(
-                    name=f"{eval_type}_f1_thresh_{iou_threshold}", default=torch.tensor(0.), dist_reduce_fx="sum"
+                    name=f"{eval_type}_f1_thresh_{iou_threshold}", default=torch.tensor(0.0), dist_reduce_fx="sum"
                 )
         for iou_threshold in self.iou_thresholds:
-            self.add_state(name=f"all_f1_thresh_{iou_threshold}", default=torch.tensor(0.), dist_reduce_fx="sum")
+            self.add_state(name=f"all_f1_thresh_{iou_threshold}", default=torch.tensor(0.0), dist_reduce_fx="sum")
 
         self.add_state(name="all_total", default=torch.tensor(0), dist_reduce_fx="sum")
 
         # initialize dataset
         self._load_gt_data(split=split)
+        self.strict = strict
 
     def get_all_data_ids(self):
         return list(self.gt_data.keys())
@@ -91,9 +93,7 @@ class Multi3DReferMetric(Metric):
             for object_id in row["object_ids"]:
                 gt_aabbs.append(scene_metadata[f"{row['scene_id']}_{object_id}"])
             gt_aabbs = np.stack(gt_aabbs) if len(gt_aabbs) > 0 else None
-            self.gt_data[data_id] = {
-                "gt_aabbs": gt_aabbs, "eval_type": row["eval_type"]
-            }
+            self.gt_data[data_id] = {"gt_aabbs": gt_aabbs, "eval_type": row["eval_type"]}
 
     def _eval_zt(self, pred):
         f1_score = 1 if len(pred) == 0 else 0
@@ -108,7 +108,7 @@ class Multi3DReferMetric(Metric):
 
         # calculate ious for all combinations
         ious = get_aabb_per_pair_ious(target, pred)
-        iou_matrix[:ious.shape[0], :ious.shape[1]] = ious
+        iou_matrix[: ious.shape[0], : ious.shape[1]] = ious
 
         # apply matching algorithm
         iou_matrix = iou_matrix.cpu().numpy()  # TODO: only have the numpy version now
@@ -144,6 +144,9 @@ class Multi3DReferMetric(Metric):
                 ...
             }
         """
+        if self.strict and not set(preds.keys()) == self.gt_data.keys():
+            raise ValueError("Mismatched IDs between predictions and dataset")
+
         for key, pred_aabbs in preds.items():
             assert key in self.gt_data, f"id {key} is not in the ground truth dataset"
             eval_type = self.gt_data[key]["eval_type"]
@@ -167,7 +170,9 @@ class Multi3DReferMetric(Metric):
         output_dict = {}
         for iou_threshold in self.iou_thresholds:
             for eval_type in Multi3DReferMetric.eval_types:
-                output_dict[f"{eval_type}_{iou_threshold}"] = self.__dict__[f"{eval_type}_f1_thresh_{iou_threshold}"] / self.__dict__[f"{eval_type}_total"]
+                output_dict[f"{eval_type}_{iou_threshold}"] = (
+                    self.__dict__[f"{eval_type}_f1_thresh_{iou_threshold}"] / self.__dict__[f"{eval_type}_total"]
+                )
             output_dict[f"all_{iou_threshold}"] = self.__dict__[f"all_f1_thresh_{iou_threshold}"] / self.all_total
 
         # clean the zt case since it doesn't have thresholds

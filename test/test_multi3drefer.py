@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 import torch
 from torchmetrics_ext.metrics.visual_grounding import Multi3DReferMetric
@@ -14,7 +15,8 @@ def test_multi3drefer_metric_low_iou(multi3drefer_metric):
 
     # Test update functionality with dummy data
     preds = {
-        "scene0406_00_6": torch.tensor([[[0.83, 0.04, 1.26], [0.88, 0.47, 1.78]]]),  # 0 predicted boxes
+        "scene0406_00_6": torch.tensor([[[0.83, 0.04, 1.26], [0.88, 0.47, 1.78]]]),  # 0 predicted boxes (w)
+        "scene0578_00_69": torch.tensor([[[0.83, 0.04, 1.26], [0.88, 0.47, 1.78]]]),  # 0 predicted boxes (wo)
         "scene0406_00_0": torch.tensor([[[3.83, 3.04, 4.26], [3.88, 3.47, 4.78]]]),  # 1 predicted box
         "scene0406_00_84": torch.tensor([[[3.40, 3.89, 3.31], [3.71, 3.96, 3.58]]]),  # 1 predicted box
         "scene0406_00_10": torch.tensor([
@@ -45,15 +47,16 @@ def test_multi3drefer_metric_low_iou(multi3drefer_metric):
         ])
     }
     result = multi3drefer_metric(preds)
-    assert result["zt_w_d"].item() == 0.0
-    assert result["st_w_d_0.25"].item() == 0.0
-    assert result["st_wo_d_0.25"].item() == 0.0
-    assert result["st_w_d_0.5"].item() == 0.0
-    assert result["st_wo_d_0.5"].item() == 0.0
-    assert result["mt_0.25"].item() == 0.0
-    assert result["mt_0.5"].item() == 0.0
-    assert result["all_0.25"].item() == 0.0
-    assert result["all_0.5"].item() == 0.0
+    assert torch.allclose(result["zt_w_d"], torch.tensor(0.0))
+    assert torch.allclose(result["zt_wo_d"], torch.tensor(0.0))
+    assert torch.allclose(result["st_w_d_0.25"], torch.tensor(0.0))
+    assert torch.allclose(result["st_wo_d_0.25"], torch.tensor(0.0))
+    assert torch.allclose(result["st_w_d_0.5"], torch.tensor(0.0))
+    assert torch.allclose(result["st_wo_d_0.5"], torch.tensor(0.0))
+    assert torch.allclose(result["mt_0.25"], torch.tensor(0.0))
+    assert torch.allclose(result["mt_0.5"], torch.tensor(0.0))
+    assert torch.allclose(result["all_0.25"], torch.tensor(0.0))
+    assert torch.allclose(result["all_0.5"], torch.tensor(0.0))
 
 
 def test_multi3drefer_metric_medium_iou(multi3drefer_metric):
@@ -61,7 +64,8 @@ def test_multi3drefer_metric_medium_iou(multi3drefer_metric):
 
     # Test update functionality with dummy data
     preds = {
-        "scene0406_00_6": torch.tensor([]),  # 0 predicted boxes
+        "scene0406_00_6": torch.tensor([]),  # 0 predicted boxes (w)
+        "scene0578_00_69": torch.tensor([]),  # 0 predicted boxes (wo)
         "scene0406_00_0": torch.tensor([[[0.855, 0.0380, 1.2593], [0.88, 0.47, 1.78]]]),  # 1 predicted box
         "scene0406_00_84": torch.tensor([[[0.0827, 0.8602, 0.3036], [0.706, 0.964, 0.575]]]),  # 1 predicted box
         "scene0406_00_10": torch.tensor([
@@ -92,15 +96,16 @@ def test_multi3drefer_metric_medium_iou(multi3drefer_metric):
         ])
     }
     result = multi3drefer_metric(preds)
-    assert result["zt_w_d"].item() == 1.0
-    assert result["st_w_d_0.25"].item() == 1.0
-    assert result["st_wo_d_0.25"].item() == 1.0
-    assert result["st_w_d_0.5"].item() == 0.0
-    assert result["st_wo_d_0.5"].item() == 0.0
-    assert result["mt_0.25"].item() == 1.0
-    assert result["mt_0.5"].item() == 0.0
-    assert result["all_0.25"].item() == 1.0
-    assert result["all_0.5"].item() == 0.25  # because zt counts as 1
+    assert torch.allclose(result["zt_w_d"], torch.tensor(1.0))
+    assert torch.allclose(result["zt_wo_d"], torch.tensor(1.0))
+    assert torch.allclose(result["st_w_d_0.25"], torch.tensor(1.0))
+    assert torch.allclose(result["st_wo_d_0.25"], torch.tensor(1.0))
+    assert torch.allclose(result["st_w_d_0.5"], torch.tensor(0.0))
+    assert torch.allclose(result["st_wo_d_0.5"], torch.tensor(0.0))
+    assert torch.allclose(result["mt_0.25"], torch.tensor(1.0))
+    assert torch.allclose(result["mt_0.5"], torch.tensor(0.0))
+    assert torch.allclose(result["all_0.25"], torch.tensor(1.0))
+    assert torch.allclose(result["all_0.5"], torch.tensor(0.40))  # because zt counts as 1
 
 
 def test_multi3drefer_metric_high_iou(multi3drefer_metric):
@@ -108,7 +113,8 @@ def test_multi3drefer_metric_high_iou(multi3drefer_metric):
 
     # Test update functionality with dummy data
     preds = {
-        "scene0406_00_6": torch.tensor([]),  # 0 predicted boxes
+        "scene0406_00_6": torch.tensor([]),  # 0 predicted boxes (w)
+        "scene0578_00_69": torch.tensor([]),  # 0 predicted boxes (wo)
         "scene0406_00_0": torch.tensor([[[0.83, 0.04, 1.26], [0.88, 0.47, 1.78]]]),  # 1 predicted box
         "scene0406_00_84": torch.tensor([[[0.40, 0.89, 0.31], [0.71, 0.96, 0.58]]]),  # 1 predicted box
         "scene0406_00_10": torch.tensor([
@@ -139,12 +145,13 @@ def test_multi3drefer_metric_high_iou(multi3drefer_metric):
         ])
     }
     result = multi3drefer_metric(preds)
-    assert result["zt_w_d"].item() == 1.0
-    assert result["st_w_d_0.25"].item() == 1.0
-    assert result["st_wo_d_0.25"].item() == 1.0
-    assert result["st_w_d_0.5"].item() == 1.0
-    assert result["st_wo_d_0.5"].item() == 1.0
-    assert result["mt_0.25"].item() == 1.0
-    assert result["mt_0.5"].item() == 1.0
-    assert result["all_0.25"].item() == 1.0
-    assert result["all_0.5"].item() == 1.0
+    assert torch.allclose(result["zt_w_d"], torch.tensor(1.0))
+    assert torch.allclose(result["zt_wo_d"], torch.tensor(1.0))
+    assert torch.allclose(result["st_w_d_0.25"], torch.tensor(1.0))
+    assert torch.allclose(result["st_wo_d_0.25"], torch.tensor(1.0))
+    assert torch.allclose(result["st_w_d_0.5"], torch.tensor(1.0))
+    assert torch.allclose(result["st_wo_d_0.5"], torch.tensor(1.0))
+    assert torch.allclose(result["mt_0.25"], torch.tensor(1.0))
+    assert torch.allclose(result["mt_0.5"], torch.tensor(1.0))
+    assert torch.allclose(result["all_0.25"], torch.tensor(1.0))
+    assert torch.allclose(result["all_0.5"], torch.tensor(1.0))

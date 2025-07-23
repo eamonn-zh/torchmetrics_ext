@@ -96,7 +96,7 @@ class ViGiL3DMetric(Metric):
                 if row["scene_id"] not in scene_ids:
                     continue
 
-                data_id = row["ann_id"]
+                data_id = f"{row['scene_id']}_{row['ann_id']}"
                 gt_aabbs = []
                 for object_id in row["object_ids"]:
                     gt_aabbs.append(scene_metadata[f"{row['scene_id']}_{object_id}"])
@@ -118,7 +118,7 @@ class ViGiL3DMetric(Metric):
 
         # check that all data ids are present
         for row in raw_dataset:
-            data_id = row["ann_id"]
+            data_id = f"{row['scene_id']}_{row['ann_id']}"
             if data_id not in self.gt_data:
                 raise ValueError(f"Data ID {data_id} not found in the ground truth dataset.")
 

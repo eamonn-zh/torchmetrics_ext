@@ -3,11 +3,11 @@ import torch
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from typing import Dict
 from torchmetrics import Metric
 from datasets import load_dataset
-from typing import Dict, Sequence
 from huggingface_hub import hf_hub_download
-from torchmetrics_ext.tools import get_batch_aabb_ious
+from torchmetrics_ext.util import get_batch_aabb_ious
 
 
 class ScanReferMetric(Metric):

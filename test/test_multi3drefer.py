@@ -1,4 +1,3 @@
-import numpy as np
 import pytest
 import torch
 from torchmetrics_ext.metrics.visual_grounding import Multi3DReferMetric

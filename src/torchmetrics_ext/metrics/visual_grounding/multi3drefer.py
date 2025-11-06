@@ -6,7 +6,7 @@ from torchmetrics import Metric
 from datasets import load_dataset
 from huggingface_hub import hf_hub_download
 from scipy.optimize import linear_sum_assignment
-from torchmetrics_ext.tools import get_aabb_per_pair_ious
+from torchmetrics_ext.util import get_aabb_per_pair_ious
 
 
 class Multi3DReferMetric(Metric):

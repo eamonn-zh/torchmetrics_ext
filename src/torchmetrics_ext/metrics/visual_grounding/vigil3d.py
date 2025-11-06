@@ -1,5 +1,4 @@
 import re
-
 import torch
 import numpy as np
 from tqdm import tqdm
@@ -8,7 +7,7 @@ from torchmetrics import Metric
 from datasets import load_dataset
 from huggingface_hub import hf_hub_download
 from scipy.optimize import linear_sum_assignment
-from torchmetrics_ext.tools import get_aabb_per_pair_ious
+from torchmetrics_ext.util import get_aabb_per_pair_ious
 
 
 class ViGiL3DMetric(Metric):
@@ -205,5 +204,4 @@ class ViGiL3DMetric(Metric):
         # clean the zt case since it doesn't have thresholds
         output_dict[f"zt"] = output_dict["zt_0.25"]
         del output_dict["zt_0.5"]
-
         return output_dict

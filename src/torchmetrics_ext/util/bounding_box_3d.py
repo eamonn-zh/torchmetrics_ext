@@ -43,7 +43,6 @@ def get_batch_aabb_ious(batch_boxes_1_bound: torch.Tensor, batch_boxes_2_bound: 
     return ious.flatten()
 
 
-
 def get_aabb_per_pair_ious(boxes_1_bound: torch.Tensor, boxes_2_bound: torch.Tensor) -> torch.Tensor:
     """
     Calculates the Intersection over Union (IoU) for alll combinations of boxes in two sets of 3D axis-aligned bounding boxes (AABB).

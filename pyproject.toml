@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "torchmetrics_ext"
+version = "0.3.2"
+description = "An extension of torchmetrics package."
+readme = "README.md"
+authors = [
+    {name = "Yiming Zhang"}
+]
+license = {text = "Apache-2.0"}
+keywords = ["deep learning", "machine learning", "pytorch", "metrics"]
+classifiers = [
+    "Natural Language :: English",
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Apache Software License",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "torchmetrics",
+    "torch",
+    "huggingface_hub",
+    "datasets",
+    "scipy",
+    "gdown",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.urls]
+Homepage = "https://github.com/eamonn-zh/torchmetrics_ext"
+Repository = "https://github.com/eamonn-zh/torchmetrics_ext"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

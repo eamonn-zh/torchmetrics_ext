@@ -28,7 +28,8 @@ class VSIBenchMetric(Metric):
 
         # initialize metrics
         for question_type in (self.mcq_question_types + self.numeric_question_types):
-            self.add_state(name=f"{question_type}_accuracy", default=torch.tensor(0, dtype=torch.long), dist_reduce_fx="sum")
+            self.add_state(name=f"{question_type}_acc", default=torch.tensor(0, dtype=torch.long), dist_reduce_fx="sum")
+            self.add_state(name=f"{question_type}_total", default=torch.tensor(0), dist_reduce_fx="sum")
 
         # initialize dataset
         self._load_gt_data(split=split)
@@ -52,9 +53,10 @@ class VSIBenchMetric(Metric):
 
     def update(self, preds: Dict[int, str]) -> None:
         for question_id, pred_answer in preds.items():
-            pred_answer = str(pred_answer).strip().split(" ")[0].rstrip(".").strip()
             assert question_id in self.gt_data, f"id {question_id} is not in the ground truth dataset"
             gt_question_type = self.gt_data[question_id]["question_type"]
+            self.__dict__[f"{gt_question_type}_total"] += 1
+            pred_answer = str(pred_answer).strip().split(" ")[0].rstrip(".").strip()
             gt_answer = self.gt_data[question_id]["ground_truth"]
             if gt_question_type in self.mcq_question_types:
                 accuracy = 1.0 if pred_answer.lower() == gt_answer.lower() else 0.0
@@ -71,7 +73,7 @@ class VSIBenchMetric(Metric):
     def compute(self) -> Dict[str, torch.Tensor]:
         output_dict = {}
         for question_type in (self.mcq_question_types + self.numeric_question_types):
-            output_dict[f"{question_type}_acc"] = self.__dict__[f"{question_type}_accuracy"].mean() * 100
+            output_dict[f"{question_type}_acc"] = self.__dict__[f"{question_type}_accuracy"] / self.__dict__[f"{question_type}_total"] * 100
 
         rel_prefix = "object_rel_direction"
         rel_levels = ("easy", "medium", "hard")

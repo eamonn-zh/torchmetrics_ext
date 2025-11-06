@@ -49,7 +49,7 @@ class VSIBenchMetric(Metric):
         num_pts = int((end - start) / interval + 2)
         conf_intervals = torch.linspace(start, end, steps=num_pts, dtype=torch.float64)
         accuracy = (abs(pred - target) / target) <= (1 - conf_intervals)
-        return accuracy.mean()
+        return accuracy.to(conf_intervals.dtype).mean()
 
     def update(self, preds: Dict[int, str]) -> None:
         for question_id, pred_answer in preds.items():
@@ -68,7 +68,6 @@ class VSIBenchMetric(Metric):
                 except:
                     accuracy = 0.0
             self.__dict__[f"{gt_question_type}_acc"] += accuracy
-
 
     def compute(self) -> Dict[str, torch.Tensor]:
         output_dict = {}

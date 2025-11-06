@@ -28,7 +28,7 @@ class VSIBenchMetric(Metric):
 
         # initialize metrics
         for question_type in (self.mcq_question_types + self.numeric_question_types):
-            self.add_state(name=f"{question_type}_accuracy", default=torch.tensor(0), dist_reduce_fx="sum")
+            self.add_state(name=f"{question_type}_accuracy", default=torch.tensor(0, dtype=torch.long), dist_reduce_fx="sum")
 
         # initialize dataset
         self._load_gt_data(split=split)

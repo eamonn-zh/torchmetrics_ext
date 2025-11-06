@@ -46,8 +46,8 @@ class VSIBenchMetric(Metric):
 
     @staticmethod
     def _mean_relative_accuracy(pred, target, start, end, interval):
-        num_pts = (end - start) / interval + 2
-        conf_intervals = np.linspace(start, end, int(num_pts), dtype=np.float64)
+        num_pts = int((end - start) / interval + 2)
+        conf_intervals = torch.linspace(start, end, steps=num_pts, dtype=torch.float64)
         accuracy = (abs(pred - target) / target) <= (1 - conf_intervals)
         return accuracy.mean()
 

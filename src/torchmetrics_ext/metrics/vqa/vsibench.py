@@ -50,7 +50,7 @@ class VSIBenchMetric(Metric):
         accuracy = (abs(pred - target) / target) <= (1 - conf_intervals)
         return accuracy.mean()
 
-    def update(self, preds: Dict[str, str]) -> None:
+    def update(self, preds: Dict[int, str]) -> None:
         for question_id, pred_answer in preds.items():
             pred_answer = str(pred_answer).strip().split(" ")[0].rstrip(".").strip()
             assert question_id in self.gt_data, f"id {question_id} is not in the ground truth dataset"

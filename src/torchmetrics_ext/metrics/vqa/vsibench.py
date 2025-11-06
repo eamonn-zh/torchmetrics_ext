@@ -38,7 +38,7 @@ class VSIBenchMetric(Metric):
         raw_dataset = load_dataset("nyu-visionx/VSI-Bench", split=split)
         for row in raw_dataset:
             # exclude question_id in the value
-            self.gt_data[row["question_id"]] = {key: value for key, value in row.items() if key != "question_id"}
+            self.gt_data[row["id"]] = {key: value for key, value in row.items() if key != "id"}
 
     def get_all_data_ids(self):
         return list(self.gt_data.keys())

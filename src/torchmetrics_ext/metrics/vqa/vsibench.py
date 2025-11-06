@@ -67,13 +67,13 @@ class VSIBenchMetric(Metric):
                     )
                 except:
                     accuracy = 0.0
-            self.__dict__[f"{gt_question_type}_accuracy"] += accuracy
+            self.__dict__[f"{gt_question_type}_acc"] += accuracy
 
 
     def compute(self) -> Dict[str, torch.Tensor]:
         output_dict = {}
         for question_type in (self.mcq_question_types + self.numeric_question_types):
-            output_dict[f"{question_type}_acc"] = self.__dict__[f"{question_type}_accuracy"] / self.__dict__[f"{question_type}_total"] * 100
+            output_dict[f"{question_type}_acc"] = self.__dict__[f"{question_type}_acc"] / self.__dict__[f"{question_type}_total"] * 100
 
         rel_prefix = "object_rel_direction"
         rel_levels = ("easy", "medium", "hard")

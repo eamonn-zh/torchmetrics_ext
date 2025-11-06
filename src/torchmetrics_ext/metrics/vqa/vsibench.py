@@ -8,17 +8,17 @@ from datasets import load_dataset
 class VSIBenchMetric(Metric):
 
     mcq_question_types = [
+        "object_rel_distance",
         "object_rel_direction_easy",
         "object_rel_direction_medium",
         "object_rel_direction_hard",
-        "object_rel_distance",
         "route_planning",
         "obj_appearance_order"
     ]
 
     numeric_question_types = [
-        "object_abs_distance",
         "object_counting",
+        "object_abs_distance",
         "object_size_estimation",
         "room_size_estimation"
     ]

@@ -1,5 +1,4 @@
 import torch
-import numpy as np
 from typing import Dict
 from torchmetrics import Metric
 from datasets import load_dataset

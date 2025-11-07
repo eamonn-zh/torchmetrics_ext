@@ -73,5 +73,5 @@ class ScanQAMetric(Metric):
             score, _ = scorer.compute_score(gts, preds)
             if isinstance(score, list):
                 score = score[-1]
-            output_dict[metric_name] = f"{score * 100:.2f}"
+            output_dict[metric_name] = score * 100
         return output_dict

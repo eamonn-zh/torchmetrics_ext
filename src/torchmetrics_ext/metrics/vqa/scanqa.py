@@ -42,7 +42,6 @@ class ScanQAMetric(Metric):
         cache_path = os.path.join(config.HF_DATASETS_CACHE, "scanqa")
         cache_path = gdown.download(id=self.dataset_google_drive_file_ids[split], output=f"{cache_path}/", resume=True)
         raw_dataset = pd.read_json(cache_path)[["answers", "question_id", "question"]]
-        raw_dataset["answers"] = raw_dataset["answers"].astype(str)
 
         for row in raw_dataset.itertuples(index=False):
             # exclude question_id in the value
@@ -64,7 +63,7 @@ class ScanQAMetric(Metric):
         gts = {}
         preds = {}
         for question_id, pred, gt in zip(self.ids, self.preds, self.gts):
-            gts[question_id] = [{"caption": one_gt} for one_gt in gt]
+            gts[question_id] = [{"caption": str(one_gt)} for one_gt in gt]
             preds[question_id] = [{"caption": pred}]
 
         gts = self.tokenizer.tokenize(gts)

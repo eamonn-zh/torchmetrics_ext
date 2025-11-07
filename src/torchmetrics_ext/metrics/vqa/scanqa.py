@@ -42,6 +42,7 @@ class ScanQAMetric(Metric):
         cache_path = os.path.join(config.HF_DATASETS_CACHE, "scanqa")
         cache_path = gdown.download(id=self.dataset_google_drive_file_ids[split], output=f"{cache_path}/", resume=True)
         raw_dataset = pd.read_json(cache_path)[["answers", "question_id", "question"]]
+        raw_dataset["answers"] = raw_dataset["answers"].astype(str)
 
         for row in raw_dataset.itertuples(index=False):
             # exclude question_id in the value
@@ -55,7 +56,7 @@ class ScanQAMetric(Metric):
     def update(self, preds: Dict[str, str]) -> None:
         for question_id, pred_answer in preds.items():
             assert question_id in self.gt_data, f"id {question_id} is not in the ground truth dataset"
-            self.preds.append(pred_answer)
+            self.preds.append(str(pred_answer))
             self.gts.append(self.gt_data[question_id]["answers"])
             self.ids.append(question_id)
 

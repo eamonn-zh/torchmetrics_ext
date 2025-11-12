@@ -84,5 +84,5 @@ class VSIBenchMetric(Metric):
         for k in rel_keys:
             output_dict.pop(k, None)
 
-        output_dict["overall_acc"] = torch.stack(list(output_dict.values())).mean()
+        output_dict["overall_acc"] = torch.stack(list(output_dict.values())).nanmean()
         return output_dict

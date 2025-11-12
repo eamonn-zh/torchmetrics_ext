@@ -22,8 +22,10 @@ class VSIBenchMetric(Metric):
         "room_size_estimation"
     ]
 
-    def __init__(self, split="test"):
+    def __init__(self, split="test", dataset_path="nyu-visionx/VSI-Bench"):
         super().__init__()
+
+        self.dataset_path = dataset_path
 
         # initialize metrics
         for question_type in (self.mcq_question_types + self.numeric_question_types):
@@ -35,7 +37,7 @@ class VSIBenchMetric(Metric):
 
     def _load_gt_data(self, split):
         self.gt_data = {}
-        raw_dataset = load_dataset("nyu-visionx/VSI-Bench", split=split)
+        raw_dataset = load_dataset(self.dataset_path, split=split)
         for row in raw_dataset:
             # exclude question_id in the value
             self.gt_data[row["id"]] = {key: value for key, value in row.items() if key != "id"}

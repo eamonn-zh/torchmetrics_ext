@@ -21,7 +21,8 @@ class AlphaBenchMetric(Metric):
         "object_counting_hard",
         "object_abs_distance",
         "object_size_estimation",
-        "room_size_estimation"
+        "room_size_estimation_single",
+        "room_size_estimation_all"
     ]
 
     def __init__(self, split="test", dataset_path="nyu-visionx/VSI-Bench", dir_name=None):
@@ -78,26 +79,30 @@ class AlphaBenchMetric(Metric):
         for question_type in (self.mcq_question_types + self.numeric_question_types):
             output_dict[f"{question_type}_acc"] = self.__dict__[f"{question_type}_acc"] / self.__dict__[f"{question_type}_total"] * 100
 
-        rel_dir_prefix = "object_rel_direction"
         rel_dir_levels = ("easy", "medium", "hard")
-        rel_dir_keys = [f"{rel_dir_prefix}_{lvl}_acc" for lvl in rel_dir_levels]
-        output_dict[f"{rel_dir_prefix}_acc"] = torch.stack([output_dict[k] for k in rel_dir_keys]).mean()
+        rel_dir_keys = [f"object_rel_direction_{lvl}_acc" for lvl in rel_dir_levels]
+        output_dict["object_rel_direction_acc"] = torch.stack([output_dict[k] for k in rel_dir_keys]).mean()
         for k in rel_dir_keys:
             output_dict.pop(k, None)
 
-        obj_count_prefix = "object_counting"
         obj_count_levels = ("easy", "hard")
-        obj_count_keys = [f"{obj_count_prefix}_{lvl}_acc" for lvl in obj_count_levels]
-        output_dict[f"{obj_count_prefix}_acc"] = torch.stack([output_dict[k] for k in obj_count_keys]).mean()
+        obj_count_keys = [f"object_counting_{lvl}_acc" for lvl in obj_count_levels]
+        output_dict["object_counting_acc"] = torch.stack([output_dict[k] for k in obj_count_keys]).mean()
         for k in obj_count_keys:
             output_dict.pop(k, None)
 
-        rel_dist_prefix = "object_rel_distance"
         rel_dist_levels = ("min", "max")
-        rel_dist_keys = [f"{rel_dist_prefix}_{lvl}_acc" for lvl in rel_dist_levels]
-        output_dict[f"{rel_dist_prefix}_acc"] = torch.stack([output_dict[k] for k in rel_dist_keys]).mean()
+        rel_dist_keys = [f"object_rel_distance_{lvl}_acc" for lvl in rel_dist_levels]
+        output_dict["object_rel_distance_acc"] = torch.stack([output_dict[k] for k in rel_dist_keys]).mean()
         for k in rel_dist_keys:
             output_dict.pop(k, None)
+
+        room_size_levels = ("single", "all")
+        room_size_keys = [f"room_size_estimation_{lvl}_acc" for lvl in room_size_levels]
+        output_dict["room_size_estimation_acc"] = torch.stack([output_dict[k] for k in room_size_keys]).mean()
+        for k in room_size_keys:
+            output_dict.pop(k, None)
+
 
         output_dict["overall_acc"] = torch.stack(list(output_dict.values())).nanmean()
         return output_dict

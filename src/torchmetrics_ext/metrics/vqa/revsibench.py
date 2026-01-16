@@ -4,7 +4,7 @@ from torchmetrics import Metric
 from datasets import load_dataset
 
 
-class AlphaBenchMetric(Metric):
+class ReVSIBenchMetric(Metric):
 
     mcq_question_types = [
         "object_rel_distance_min",
@@ -13,7 +13,6 @@ class AlphaBenchMetric(Metric):
         "object_rel_direction_medium",
         "object_rel_direction_hard",
         "route_planning",
-        "obj_appearance_order"
     ]
 
     numeric_question_types = [
@@ -25,7 +24,7 @@ class AlphaBenchMetric(Metric):
         "room_size_estimation_all"
     ]
 
-    def __init__(self, split="test", dataset_path="nyu-visionx/VSI-Bench", dir_name=None):
+    def __init__(self, split="test", dataset_path="3dlg-hcvc/ReVSI-Bench", dir_name=None):
         super().__init__()
 
         self.dataset_path = dataset_path
@@ -102,7 +101,6 @@ class AlphaBenchMetric(Metric):
         output_dict["room_size_estimation_acc"] = torch.stack([output_dict[k] for k in room_size_keys]).mean()
         for k in room_size_keys:
             output_dict.pop(k, None)
-
 
         output_dict["overall_acc"] = torch.stack(list(output_dict.values())).nanmean()
         return output_dict

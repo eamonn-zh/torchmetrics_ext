@@ -10,8 +10,9 @@ class ReVSIBenchMetric(Metric):
         "object_rel_distance_min",
         "object_rel_distance_max",
         "object_rel_direction_easy",
-        "object_rel_direction_medium",
+        "object_rel_direction_easy_reverse",
         "object_rel_direction_hard",
+        "object_rel_direction_hard_reverse",
         "route_planning",
     ]
 
@@ -62,12 +63,21 @@ class ReVSIBenchMetric(Metric):
             self.__dict__[f"{gt_question_type}_total"] += 1
             pred_answer = str(pred_answer).strip().split(" ")[0].rstrip(".").strip()
             gt_answer = self.gt_data[question_id]["ground_truth"]
-            if gt_question_type in self.mcq_question_types:
+            if gt_question_type.startswith("object_counting") and float(gt_answer) <= 5:
+                accuracy = 1.0 if int(float(pred_answer)) == int(float(gt_answer)) else 0.0
+            elif gt_question_type.startswith("object_counting"):
+                try:
+                    accuracy = self._mean_relative_accuracy(
+                        float(pred_answer), float(gt_answer), 0.6, 0.95, 0.05
+                    )
+                except:
+                    accuracy = 0.0
+            elif gt_question_type in self.mcq_question_types:
                 accuracy = 1.0 if pred_answer.lower() == gt_answer.lower() else 0.0
             elif gt_question_type in self.numeric_question_types:
                 try:
                     accuracy = self._mean_relative_accuracy(
-                        float(pred_answer), float(gt_answer), 0.5, 0.95, 0.05
+                        float(pred_answer), float(gt_answer), 0.6, 0.95, 0.05
                     )
                 except:
                     accuracy = 0.0
@@ -78,7 +88,7 @@ class ReVSIBenchMetric(Metric):
         for question_type in (self.mcq_question_types + self.numeric_question_types):
             output_dict[f"{question_type}_acc"] = self.__dict__[f"{question_type}_acc"] / self.__dict__[f"{question_type}_total"] * 100
 
-        rel_dir_levels = ("easy", "medium", "hard")
+        rel_dir_levels = ("easy", "easy_reverse", "hard", "hard_reverse")
         rel_dir_keys = [f"object_rel_direction_{lvl}_acc" for lvl in rel_dir_levels]
         output_dict["object_rel_direction_acc"] = torch.stack([output_dict[k] for k in rel_dir_keys]).mean()
         for k in rel_dir_keys:

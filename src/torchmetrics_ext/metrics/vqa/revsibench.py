@@ -63,16 +63,7 @@ class ReVSIBenchMetric(Metric):
             self.__dict__[f"{gt_question_type}_total"] += 1
             pred_answer = str(pred_answer).strip().split(" ")[0].rstrip(".").strip()
             gt_answer = self.gt_data[question_id]["ground_truth"]
-            if gt_question_type.startswith("object_counting") and float(gt_answer) < 5:
-                accuracy = 1.0 if int(float(pred_answer)) == int(float(gt_answer)) else 0.0
-            elif gt_question_type.startswith("object_counting"):
-                try:
-                    accuracy = self._mean_relative_accuracy(
-                        float(pred_answer), float(gt_answer), 0.5, 0.95, 0.05
-                    )
-                except:
-                    accuracy = 0.0
-            elif gt_question_type in self.mcq_question_types:
+            if gt_question_type in self.mcq_question_types:
                 accuracy = 1.0 if pred_answer.lower() == gt_answer.lower() else 0.0
             elif gt_question_type in self.numeric_question_types:
                 try:

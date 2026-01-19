@@ -68,7 +68,7 @@ class ReVSIBenchMetric(Metric):
             elif gt_question_type.startswith("object_counting"):
                 try:
                     accuracy = self._mean_relative_accuracy(
-                        float(pred_answer), float(gt_answer), 0.6, 0.95, 0.05
+                        float(pred_answer), float(gt_answer), 0.5, 0.95, 0.05
                     )
                 except:
                     accuracy = 0.0
@@ -77,7 +77,7 @@ class ReVSIBenchMetric(Metric):
             elif gt_question_type in self.numeric_question_types:
                 try:
                     accuracy = self._mean_relative_accuracy(
-                        float(pred_answer), float(gt_answer), 0.6, 0.95, 0.05
+                        float(pred_answer), float(gt_answer), 0.5, 0.95, 0.05
                     )
                 except:
                     accuracy = 0.0

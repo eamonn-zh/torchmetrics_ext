@@ -38,7 +38,7 @@ class VSIBenchMetric(Metric):
 
     def _load_gt_data(self, split):
         self.gt_data = {}
-        raw_dataset = load_dataset(self.dataset_path, data_dir=self.dir_name, split=split)
+        raw_dataset = load_dataset(self.dataset_path, self.dir_name, split=split)
         for row in raw_dataset:
             # exclude question_id in the value
             self.gt_data[row["id"]] = {key: value for key, value in row.items() if key != "id"}

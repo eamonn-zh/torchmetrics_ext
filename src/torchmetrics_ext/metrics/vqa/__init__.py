@@ -1,5 +1,5 @@
 from .vsibench import VSIBenchMetric
-from .revsibench import ReVSIBenchMetric
+from .revsi import ReVSIMetric
 from .scanqa import ScanQAMetric
 
-__all__ = ["VSIBenchMetric", "ScanQAMetric", "ReVSIBenchMetric"]
+__all__ = ["VSIBenchMetric", "ScanQAMetric", "ReVSIMetric"]

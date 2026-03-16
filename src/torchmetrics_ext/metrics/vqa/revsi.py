@@ -4,7 +4,7 @@ from torchmetrics import Metric
 from datasets import load_dataset
 
 
-class ReVSIBenchMetric(Metric):
+class ReVSIMetric(Metric):
 
     mcq_question_types = [
         "object_rel_distance_min",
@@ -25,7 +25,7 @@ class ReVSIBenchMetric(Metric):
         "room_size_estimation_all"
     ]
 
-    def __init__(self, split="test", dataset_path="3dlg-hcvc/ReVSI-Bench", dir_name=None):
+    def __init__(self, split="test", dataset_path="3dlg-hcvc/ReVSI", dir_name=None):
         super().__init__()
 
         self.dataset_path = dataset_path
@@ -33,8 +33,12 @@ class ReVSIBenchMetric(Metric):
 
         # initialize metrics
         for question_type in (self.mcq_question_types + self.numeric_question_types):
-            self.add_state(name=f"{question_type}_acc", default=torch.tensor(0, dtype=torch.float64), dist_reduce_fx="sum")
-            self.add_state(name=f"{question_type}_total", default=torch.tensor(0, dtype=torch.float64), dist_reduce_fx="sum")
+            self.add_state(
+                name=f"{question_type}_acc", default=torch.tensor(0, dtype=torch.float64), dist_reduce_fx="sum"
+            )
+            self.add_state(
+                name=f"{question_type}_total", default=torch.tensor(0, dtype=torch.float64), dist_reduce_fx="sum"
+            )
 
         # initialize dataset
         self._load_gt_data(split=split)

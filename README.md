@@ -25,6 +25,10 @@ Currently, it offers metrics for:
   - [Multi3DRefer](https://3dlg-hcvc.github.io/multi3drefer/)
 - 3D Object Detection
   - [ScanNet](http://www.scan-net.org/) (Under development)
+- 3D Visual Question Answering
+  - [VSI-Bench](https://vision-x-nyu.github.io/thinking-in-space.github.io/)
+  - [ReVSI](https://3dlg-hcvc.github.io/revsi/)
+  - [ScanQA](https://github.com/ATR-DBI/ScanQA)
 
 ## Using TorchMetrics Extension
 Here are examples for using the metrics in TorchMetrics Extension:
@@ -44,6 +48,7 @@ metric = ScanReferMetric(dataset_file_path="./ScanRefer_filtered_val.json", spli
 preds = {
     "scene0011_00_0_0": torch.tensor([[0., 0., 0.], [0.5, 0.5, 0.5]]),
     "scene0011_01_0_1": torch.tensor([[0., 0., 0.], [1., 1., 1.]]),
+    ...
 }
 metric(preds)
 ```
@@ -82,6 +87,26 @@ metric = Multi3DReferMetric(split="validation")
 preds = {
     "scene0011_00_0": torch.tensor([[[0., 0., 0.], [0.5, 0.5, 0.5]]]),  # 1 predicted box
     "scene0011_01_1": torch.tensor([[[0., 0., 0.], [1., 1., 1.]], [[0., 0., 0.], [2., 2., 2.]]])  # 2 predicted boxes
+    ...
 }
 result = metric(preds)
 ```
+
+### ReVSI
+> The dataset will be automatically downloaded from the official [ReVSI Hugging Face repo](https://huggingface.co/datasets/3dlg-hcvc/ReVSI).
+
+```python
+import torch
+from torchmetrics_ext.metrics.vqa import ReVSIMetric
+
+metric = ReVSIMetric(subset="all_frame")
+
+# preds is a dictionary mapping each unique question identifier "id" to a predicted answer
+preds = {
+    "1": "3"
+    "100": "A",
+    ...
+}
+result = metric(preds)
+```
+

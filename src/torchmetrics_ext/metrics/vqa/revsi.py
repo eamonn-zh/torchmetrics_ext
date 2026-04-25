@@ -7,29 +7,29 @@ from datasets import load_dataset
 class ReVSIMetric(Metric):
 
     mcq_question_types = [
-        "object_rel_distance_min",
-        "object_rel_distance_max",
-        "object_rel_direction_easy",
-        "object_rel_direction_easy_reverse",
-        "object_rel_direction_hard",
-        "object_rel_direction_hard_reverse",
+        "object_rel_direction_forward_easy",
+        "object_rel_direction_backward_easy",
+        "object_rel_direction_forward_hard",
+        "object_rel_direction_backward_hard",
+        "object_rel_distance_closest",
+        "object_rel_distance_farthest",
         "route_planning",
     ]
 
     numeric_question_types = [
-        "object_counting_easy",
-        "object_counting_hard",
+        "object_counting_single",
+        "object_counting_multiple",
         "object_abs_distance",
         "object_size_estimation",
         "room_size_estimation_single",
-        "room_size_estimation_all"
+        "room_size_estimation_multiple"
     ]
 
-    def __init__(self, split="test", dataset_path="3dlg-hcvc/ReVSI", dir_name=None):
+    def __init__(self, split="test", dataset_path="3dlg-hcvc/ReVSI", subset="all_frame"):
         super().__init__()
 
         self.dataset_path = dataset_path
-        self.dir_name = dir_name
+        self.subset = subset
 
         # initialize metrics
         for question_type in (self.mcq_question_types + self.numeric_question_types):
@@ -45,7 +45,7 @@ class ReVSIMetric(Metric):
 
     def _load_gt_data(self, split):
         self.gt_data = {}
-        raw_dataset = load_dataset(self.dataset_path, data_dir=self.dir_name, split=split)
+        raw_dataset = load_dataset(self.dataset_path, self.subset, split=split)
         for row in raw_dataset:
             # exclude question_id in the value
             self.gt_data[row["id"]] = {key: value for key, value in row.items() if key != "id"}
@@ -83,25 +83,25 @@ class ReVSIMetric(Metric):
         for question_type in (self.mcq_question_types + self.numeric_question_types):
             output_dict[f"{question_type}_acc"] = self.__dict__[f"{question_type}_acc"] / self.__dict__[f"{question_type}_total"] * 100
 
-        rel_dir_levels = ("easy", "easy_reverse", "hard", "hard_reverse")
+        rel_dir_levels = ("forward_easy", "backward_easy", "forward_hard", "backward_hard")
         rel_dir_keys = [f"object_rel_direction_{lvl}_acc" for lvl in rel_dir_levels]
         output_dict["object_rel_direction_acc"] = torch.stack([output_dict[k] for k in rel_dir_keys]).mean()
         for k in rel_dir_keys:
             output_dict.pop(k, None)
 
-        obj_count_levels = ("easy", "hard")
+        obj_count_levels = ("single", "multiple")
         obj_count_keys = [f"object_counting_{lvl}_acc" for lvl in obj_count_levels]
         output_dict["object_counting_acc"] = torch.stack([output_dict[k] for k in obj_count_keys]).mean()
         for k in obj_count_keys:
             output_dict.pop(k, None)
 
-        rel_dist_levels = ("min", "max")
+        rel_dist_levels = ("closest", "farthest")
         rel_dist_keys = [f"object_rel_distance_{lvl}_acc" for lvl in rel_dist_levels]
         output_dict["object_rel_distance_acc"] = torch.stack([output_dict[k] for k in rel_dist_keys]).mean()
         for k in rel_dist_keys:
             output_dict.pop(k, None)
 
-        room_size_levels = ("single", "all")
+        room_size_levels = ("single", "multiple")
         room_size_keys = [f"room_size_estimation_{lvl}_acc" for lvl in room_size_levels]
         output_dict["room_size_estimation_acc"] = torch.stack([output_dict[k] for k in room_size_keys]).mean()
         for k in room_size_keys:

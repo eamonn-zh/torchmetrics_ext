@@ -33,6 +33,7 @@ dependencies = [
     "datasets",
     "scipy",
     "gdown",
+    "pycocoevalcap"
 ]
 
 [project.optional-dependencies]

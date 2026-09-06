@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "torchmetrics_ext"
-version = "0.3.2"
+version = "0.4.1"
 description = "An extension of torchmetrics package."
 readme = "README.md"
 authors = [

@@ -12,6 +12,28 @@ from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
 
 
 class ScanQAMetric(Metric):
+    r"""
+    Compute the captioning metrics (BLEU-1, BLEU-4, METEOR, ROUGE-L and CIDEr) for the ScanQA 3D VQA benchmark.
+    Each predicted answer is compared against all ground truth answers of the question.
+
+    Note:
+        - METEOR and the PTB tokenizer require Java to be installed.
+        - predictions are gathered as strings, so the metric is not synchronized across devices.
+
+    References:
+        - ScanQA: https://github.com/ATR-DBI/ScanQA
+
+    Example:
+        >>> from torchmetrics_ext.metrics.vqa import ScanQAMetric
+        >>> metric = ScanQAMetric(split="validation")
+        >>> # preds is a dictionary mapping each unique question identifier "question_id" to a predicted answer
+        >>> preds = {
+        ...     "val-scene0011-0": "brown",
+        ...     "val-scene0011-1": "on the table",
+        ...     ...
+        ... }
+        >>> result = metric(preds)
+    """
 
     dataset_google_drive_file_ids = {
         "train": "1-EmSpD_PMX-W4f2xX-zclB5TPrLemi-U",
@@ -21,9 +43,9 @@ class ScanQAMetric(Metric):
     def __init__(self, split="validation"):
         super().__init__()
         self.tokenizer = PTBTokenizer()
+        # Bleu(4) returns BLEU-1 to BLEU-4 in one pass
         self.scorers = {
-            "BLEU_1": Bleu(1),
-            "BLEU_4": Bleu(4),
+            "BLEU": Bleu(4),
             "METEOR": Meteor(),
             "ROUGE_L": Rouge(),
             "CIDEr": Cider(),
@@ -54,7 +76,8 @@ class ScanQAMetric(Metric):
 
     def update(self, preds: Dict[str, str]) -> None:
         for question_id, pred_answer in preds.items():
-            assert question_id in self.gt_data, f"id {question_id} is not in the ground truth dataset"
+            if question_id not in self.gt_data:
+                raise KeyError(f"id {question_id} is not in the ground truth dataset")
             self.preds.append(str(pred_answer))
             self.gts.append(self.gt_data[question_id]["answers"])
             self.ids.append(question_id)
@@ -71,7 +94,9 @@ class ScanQAMetric(Metric):
         output_dict = {}
         for metric_name, scorer in self.scorers.items():
             score, _ = scorer.compute_score(gts, preds)
-            if isinstance(score, list):
-                score = score[-1]
-            output_dict[metric_name] = score * 100
+            if metric_name == "BLEU":
+                output_dict["BLEU_1"] = score[0] * 100
+                output_dict["BLEU_4"] = score[3] * 100
+            else:
+                output_dict[metric_name] = score * 100
         return output_dict

@@ -3,7 +3,7 @@ import numpy as np
 from torchmetrics import Metric
 from typing import Dict, Sequence
 from torchmetrics.utilities import dim_zero_cat
-from torchmetrics_ext.tools import get_aabb_per_pair_ious
+from torchmetrics_ext.util import get_aabb_per_pair_ious
 
 
 class MeanAveragePrecisionMetric(Metric):
@@ -62,12 +62,15 @@ class MeanAveragePrecisionMetric(Metric):
 
             unique_sem_classes = torch.cat(tensors=(current_pred_classes_sorted, current_target_classes), dim=0).unique()
 
-            for sem_class in unique_sem_classes:
+            for sem_class in unique_sem_classes.tolist():
+                if sem_class not in self.semantic_classes:
+                    continue
 
                 class_pred_mask = current_pred_classes_sorted == sem_class
                 class_target_mask = current_target_classes == sem_class
 
-                self.__dict__[f"total_{sem_class}"] += torch.count_nonzero(class_target_mask)
+                name = f"total_{sem_class}"
+                self.__dict__[name] += torch.count_nonzero(class_target_mask)
 
                 current_ious = get_aabb_per_pair_ious(
                     boxes_1_bound=current_pred_boxes_sorted[class_pred_mask], boxes_2_bound=current_target_boxes[class_target_mask]
@@ -92,8 +95,8 @@ class MeanAveragePrecisionMetric(Metric):
                                 matched_gt[one_iou_max_idx.item()] = True
 
 
-                    self.__dict__[f"tp_{sem_class}_{iou_threshold}"].extend(tp)
-                self.__dict__[f"score_{sem_class}"].extend(current_pred_scores_sorted[class_pred_mask])
+                    self.__dict__[f"tp_{sem_class}_{iou_threshold}"].append(tp)
+                self.__dict__[f"score_{sem_class}"].append(current_pred_scores_sorted[class_pred_mask])
 
 
     def compute(self) -> Dict[str, torch.Tensor]:

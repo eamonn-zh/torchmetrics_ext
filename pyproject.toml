@@ -29,6 +29,9 @@ requires-python = ">=3.9"
 dependencies = [
     "torchmetrics",
     "torch",
+    "numpy",
+    "pandas",
+    "tqdm",
     "huggingface_hub",
     "datasets",
     "scipy",

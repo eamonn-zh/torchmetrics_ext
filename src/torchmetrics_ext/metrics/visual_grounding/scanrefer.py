@@ -29,10 +29,10 @@ class ScanReferMetric(Metric):
         >>> # preds is a dictionary mapping each unique description identifier (formatted as "{scene_id}_{object_id}_{ann_id}")
         >>> # to the predicted axis-aligned bounding boxes in shape (2, 3)
         >>> preds = {
-        >>>     "scene0011_00_0_0": torch.tensor([[0., 0., 0.], [0.5, 0.5, 0.5]]),
-        >>>     "scene0011_01_0_1": torch.tensor([[0., 0., 0.], [1., 1., 1.]]),
-        >>>     ...
-        >>> }
+        ...     "scene0011_00_0_0": torch.tensor([[0., 0., 0.], [0.5, 0.5, 0.5]]),
+        ...     "scene0011_01_0_1": torch.tensor([[0., 0., 0.], [1., 1., 1.]]),
+        ...     ...
+        ... }
         >>> metric(preds)
     """
 
@@ -43,20 +43,13 @@ class ScanReferMetric(Metric):
         super().__init__()
 
         # initialize metrics
-        self.eval_types_mapping = {}
-        for i, eval_type in enumerate(self.eval_types):
-            self.eval_types_mapping[eval_type] = i
+        self.eval_types_mapping = {eval_type: i for i, eval_type in enumerate(self.eval_types)}
+        for eval_type in (*self.eval_types, "all"):
             self.add_state(name=f"{eval_type}_total", default=torch.tensor(0), dist_reduce_fx="sum")
-
             for iou_threshold in self.iou_thresholds:
                 self.add_state(
                     name=f"{eval_type}_tp_thresh_{iou_threshold}", default=torch.tensor(0), dist_reduce_fx="sum"
                 )
-
-        for iou_threshold in self.iou_thresholds:
-            self.add_state(name=f"all_tp_thresh_{iou_threshold}", default=torch.tensor(0), dist_reduce_fx="sum")
-
-        self.add_state(name="all_total", default=torch.tensor(0), dist_reduce_fx="sum")
 
         # initialize dataset
         self._load_gt_data(dataset_file_path=dataset_file_path, split=split)
@@ -115,7 +108,8 @@ class ScanReferMetric(Metric):
         predicted_box_batch = []
 
         for key, value in preds.items():
-            assert key in self.gt_ids_to_idx, f"id {key} is not in the ground truth dataset"
+            if key not in self.gt_ids_to_idx:
+                raise KeyError(f"id {key} is not in the ground truth dataset")
             gt_data_idx.append(self.gt_ids_to_idx[key])
             predicted_box_batch.append(value)
 
@@ -127,32 +121,26 @@ class ScanReferMetric(Metric):
         # calculate axis-aligned bounding boxes between predictions and GTs
         ious = get_batch_aabb_ious(predicted_box_batch, gt_box_batch)
 
-        # count true positives above the IoU thresholds
-        tp_thresh_masks = {}
-        for iou_threshold in self.iou_thresholds:
-            tp_thresh_masks[f"tp_thresh_{iou_threshold}_mask"] = ious >= iou_threshold
-
-        eval_type_masks = {}
-        for eval_type in self.eval_types_mapping.keys():
-            eval_type_masks[eval_type] = gt_eval_type_batch == self.eval_types_mapping[eval_type]
+        eval_type_masks = {"all": torch.ones_like(gt_eval_type_batch, dtype=torch.bool)}
+        for eval_type, eval_type_idx in self.eval_types_mapping.items():
+            eval_type_masks[eval_type] = gt_eval_type_batch == eval_type_idx
 
         # update metrics
-        self.all_total += len(preds)
+        for eval_type, eval_type_mask in eval_type_masks.items():
+            name = f"{eval_type}_total"
+            self.__dict__[name] += torch.count_nonzero(eval_type_mask)
 
-        for eval_type in self.eval_types_mapping.keys():
-            self.__dict__[f"{eval_type}_total"] += torch.count_nonzero(eval_type_masks[eval_type])
-
-        for iou_threshold in self.iou_thresholds:
-            for eval_type in self.eval_types_mapping.keys():
-                tp_thresh_mask = tp_thresh_masks[f"tp_thresh_{iou_threshold}_mask"]
-                self.__dict__[f"{eval_type}_tp_thresh_{iou_threshold}"] += torch.count_nonzero(tp_thresh_mask & eval_type_masks[eval_type])
-            self.__dict__[f"all_tp_thresh_{iou_threshold}"] += torch.count_nonzero(tp_thresh_mask)
+            for iou_threshold in self.iou_thresholds:
+                # count true positives above the IoU thresholds
+                name = f"{eval_type}_tp_thresh_{iou_threshold}"
+                self.__dict__[name] += torch.count_nonzero((ious >= iou_threshold) & eval_type_mask)
 
     def compute(self) -> Dict[str, torch.Tensor]:
         """Compute Acc@kIoU based on inputs passed in to ``update`` previously."""
         output_dict = {}
         for iou_threshold in self.iou_thresholds:
-            for eval_type in self.eval_types_mapping.keys():
-                output_dict[f"{eval_type}_{iou_threshold}"] = self.__dict__[f"{eval_type}_tp_thresh_{iou_threshold}"] / self.__dict__[f"{eval_type}_total"]
-            output_dict[f"all_{iou_threshold}"] = self.__dict__[f"all_tp_thresh_{iou_threshold}"] / self.all_total
+            for eval_type in (*self.eval_types, "all"):
+                output_dict[f"{eval_type}_{iou_threshold}"] = (
+                    self.__dict__[f"{eval_type}_tp_thresh_{iou_threshold}"] / self.__dict__[f"{eval_type}_total"]
+                )
         return output_dict

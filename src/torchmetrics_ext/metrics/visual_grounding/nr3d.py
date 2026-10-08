@@ -6,7 +6,7 @@ import pandas as pd
 from tqdm import tqdm
 from datasets import config
 from torchmetrics import Metric
-from typing import Dict, Sequence
+from typing import Dict
 
 
 class Nr3DMetric(Metric):
@@ -26,10 +26,10 @@ class Nr3DMetric(Metric):
         >>> # preds is a dictionary mapping each unique description identifier (stimulus_id)
         >>> # to the predicted object_id
         >>> preds = {
-        >>>     "scene0565_00-chair-4-25-0-1-24": 25,
-                "scene0653_00-desk-6-16-13-14-15-17-18": 16,
-        >>>     ...
-        >>> }
+        ...     "scene0565_00-chair-4-25-0-1-24": 25,
+        ...     "scene0653_00-desk-6-16-13-14-15-17-18": 16,
+        ...     ...
+        ... }
         >>> metric(preds)
     """
 
@@ -43,14 +43,9 @@ class Nr3DMetric(Metric):
         super().__init__()
 
         # initialize metrics
-        self.eval_types_mapping = {}
-        for i, eval_type in enumerate(self.eval_types):
-            self.eval_types_mapping[eval_type] = i
+        for eval_type in (*self.eval_types, "all"):
             self.add_state(name=f"{eval_type}_total", default=torch.tensor(0), dist_reduce_fx="sum")
             self.add_state(name=f"{eval_type}_tp", default=torch.tensor(0), dist_reduce_fx="sum")
-
-        self.add_state(name="all_total", default=torch.tensor(0), dist_reduce_fx="sum")
-        self.add_state(name="all_tp", default=torch.tensor(0), dist_reduce_fx="sum")
 
         # initialize dataset
         self._load_gt_data(split=split)
@@ -59,8 +54,6 @@ class Nr3DMetric(Metric):
         return list(self.gt_data.keys())
 
     def _load_gt_data(self, split):
-        self.gt_data = {}
-
         cache_path = os.path.join(config.HF_DATASETS_CACHE, "nr3d")
         cache_path = gdown.download(id=self.dataset_google_drive_file_ids[split], output=f"{cache_path}/", resume=True)
 
@@ -87,13 +80,6 @@ class Nr3DMetric(Metric):
             )
         }
 
-    def _convert_eval_types_to_idx(self, eval_types: Sequence[str], device) -> torch.Tensor:
-        eval_types_tensor = torch.empty(size=(len(eval_types), 2), dtype=torch.uint8, device=device)
-        for i, eval_type_tuple in enumerate(eval_types):
-            for j, eval_type in enumerate(eval_type_tuple):
-                eval_types_tensor[i][j] = self.eval_types_mapping[eval_type]
-        return eval_types_tensor
-
     def update(self, preds: Dict[str, int]) -> None:
         """
         Processes a batch of predicted results, evaluates them against ground truth, and updates
@@ -110,41 +96,25 @@ class Nr3DMetric(Metric):
                 ...
             }
         """
-        eval_types = []
-        predicted_obj_id_batch = []
-        gt_obj_id_batch = []
-        for key, value in preds.items():
-            assert key in self.gt_data, f"id {key} is not in the ground truth dataset"
-            eval_types.append((self.gt_data[key]["is_easy"], self.gt_data[key]["is_view_dep"]))
-            gt_obj_id_batch.append(self.gt_data[key]["gt_obj_id"])
-            predicted_obj_id_batch.append(value)
-
-        gt_obj_id_batch = torch.tensor(gt_obj_id_batch, dtype=torch.uint8)
-        predicted_obj_id_batch = torch.tensor(predicted_obj_id_batch, dtype=torch.uint8)
-
-        # convert evaluation types to numerical values for convenience
-        eval_types_tensor = self._convert_eval_types_to_idx(eval_types, predicted_obj_id_batch.device)
-
-        eval_type_masks = {}
-        for eval_type in self.eval_types_mapping.keys():
-            eval_type_masks[eval_type] = (eval_types_tensor == self.eval_types_mapping[eval_type]).any(dim=-1)
+        totals = dict.fromkeys((*self.eval_types, "all"), 0)
+        tps = dict.fromkeys((*self.eval_types, "all"), 0)
+        for key, pred_obj_id in preds.items():
+            if key not in self.gt_data:
+                raise KeyError(f"id {key} is not in the ground truth dataset")
+            gt = self.gt_data[key]
+            is_tp = int(pred_obj_id) == gt["gt_obj_id"]
+            for eval_type in (gt["is_easy"], gt["is_view_dep"], "all"):
+                totals[eval_type] += 1
+                tps[eval_type] += is_tp
 
         # update metrics
-        self.all_total += len(preds)
-
-        for eval_type in self.eval_types_mapping.keys():
-            self.__dict__[f"{eval_type}_total"] += torch.count_nonzero(eval_type_masks[eval_type])
-
-        tps = gt_obj_id_batch == predicted_obj_id_batch
-        for eval_type in self.eval_types_mapping.keys():
-            self.__dict__[f"{eval_type}_tp"] += torch.count_nonzero(eval_type_masks[eval_type] & tps)
-
-        self.all_tp += torch.count_nonzero(tps)
+        for eval_type in (*self.eval_types, "all"):
+            self.__dict__[f"{eval_type}_total"] += totals[eval_type]
+            self.__dict__[f"{eval_type}_tp"] += tps[eval_type]
 
     def compute(self) -> Dict[str, torch.Tensor]:
         """Compute Acc based on inputs passed in to ``update`` previously."""
-        output_dict = {}
-        for eval_type in self.eval_types_mapping.keys():
-            output_dict[f"{eval_type}"] = self.__dict__[f"{eval_type}_tp"] / self.__dict__[f"{eval_type}_total"]
-        output_dict[f"all"] = self.__dict__[f"all_tp"] / self.all_total
-        return output_dict
+        return {
+            eval_type: self.__dict__[f"{eval_type}_tp"] / self.__dict__[f"{eval_type}_total"]
+            for eval_type in (*self.eval_types, "all")
+        }
